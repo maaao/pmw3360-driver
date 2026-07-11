@@ -14,11 +14,12 @@
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/input/input.h>
 //#include <zephyr/keymap.h>
+#include <zephyr/logging/log.h>
 #include "pmw3360.h"
 
 #include <zephyr/logging/log.h>
-LOG_MODULE_REGISTER(pmw3360, CONFIG_PMW3360_LOG_LEVEL);
-
+// LOG_MODULE_REGISTER(pmw3360, CONFIG_PMW3360_LOG_LEVEL);
+LOG_MODULE_REGISTER(pmw3360, LOG_LEVEL_DBG);
 
 /* SROM firmware meta-data, defined in pmw3360_piv.c */
 extern const size_t pmw3360_firmware_length;
@@ -502,6 +503,7 @@ static int pmw3360_async_init_fw_load_verify(const struct device *dev) {
 
     uint8_t product_id;
     err = reg_read(dev, PMW3360_REG_PRODUCT_ID, &product_id);
+    LOG_INF("Product ID = 0x%02X", product_id);
     if (err) {
         LOG_ERR("Cannot obtain product id");
         return err;

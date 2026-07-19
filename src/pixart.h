@@ -39,7 +39,9 @@ struct pixart_data {
 
     // the work structure for delayable init steps
     struct k_work_delayable init_work;
+    struct k_work_delayable poll_work;
     int async_init_step;
+    bool use_polling;
 
     //
     bool ready;           // whether init is finished successfully

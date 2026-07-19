@@ -551,11 +551,27 @@ static void irq_handler(const struct device *gpiob, struct gpio_callback *cb, ui
 static void set_interrupt(const struct device *dev, const bool en) {
 //    LOG_INF("In pwm3360_set_interrupt");
     const struct pixart_config *config = dev->config;
+    if (!config->irq_gpio.port) {
+        return;
+    }
     int ret = gpio_pin_interrupt_configure_dt(&config->irq_gpio,
                                               en ? GPIO_INT_LEVEL_ACTIVE : GPIO_INT_DISABLE);
     if (ret < 0) {
         LOG_ERR("can't set interrupt");
     }
+}
+
+static void pmw3360_poll_work_callback(struct k_work *work) {
+    struct k_work_delayable *delayable = CONTAINER_OF(work, struct k_work_delayable, work);
+    struct pixart_data *data = CONTAINER_OF(delayable, struct pixart_data, poll_work);
+    const struct device *dev = data->dev;
+
+    if (!data->ready) {
+        return;
+    }
+
+    pmw3360_report_data(dev);
+    k_work_schedule(&data->poll_work, K_MSEC(10));
 }
 
 static enum pixart_input_mode get_input_mode_for_current_layer(const struct device *dev) {
@@ -828,7 +844,11 @@ static void pmw3360_async_init(struct k_work *work) {
         if (data->async_init_step == ASYNC_INIT_STEP_COUNT) {
             data->ready = true; // sensor is ready to work
             LOG_INF("PMW3360 initialized");
-            set_interrupt(dev, true);
+            if (data->use_polling) {
+                k_work_schedule(&data->poll_work, K_MSEC(10));
+            } else {
+                set_interrupt(dev, true);
+            }
         } else {
             k_work_schedule(&data->init_work, K_MSEC(async_init_delay[data->async_init_step]));
         }
@@ -841,6 +861,10 @@ static int pmw3360_init_irq(const struct device *dev) {
     int err;
     struct pixart_data *data = dev->data;
     const struct pixart_config *config = dev->config;
+
+    if (!config->irq_gpio.port) {
+        return 0;
+    }
 
     // check readiness of irq gpio pin
     if (!device_is_ready(config->irq_gpio.port)) {
@@ -898,10 +922,16 @@ static int pmw3360_init(const struct device *dev) {
         return err;
     }
 
-    // init irq routine
-    err = pmw3360_init_irq(dev);
-    if (err) {
-        return err;
+    data->use_polling = !config->irq_gpio.port;
+    if (!data->use_polling) {
+        err = pmw3360_init_irq(dev);
+        if (err) {
+            return err;
+        }
+    }
+
+    if (data->use_polling) {
+        k_work_init_delayable(&data->poll_work, pmw3360_poll_work_callback);
     }
 
     // Setup delayable and non-blocking init jobs, including following steps:

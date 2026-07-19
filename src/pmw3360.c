@@ -561,6 +561,8 @@ static void set_interrupt(const struct device *dev, const bool en) {
     }
 }
 
+static int pmw3360_report_data(const struct device *dev);
+
 static void pmw3360_poll_work_callback(struct k_work *work) {
     struct k_work_delayable *delayable = CONTAINER_OF(work, struct k_work_delayable, work);
     struct pixart_data *data = CONTAINER_OF(delayable, struct pixart_data, poll_work);

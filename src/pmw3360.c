@@ -913,6 +913,7 @@ static int pmw3360_init(const struct device *dev) {
 //    }
 
     // check readiness of cs gpio pin and init it to inactive
+    LOG_INF("cs port=%p pin=%d", config->cs_gpio.port, config->cs_gpio.pin);
     if (!device_is_ready(config->cs_gpio.port)) {
         LOG_ERR("SPI CS device not ready");
         return -ENODEV;
@@ -924,17 +925,17 @@ static int pmw3360_init(const struct device *dev) {
         return err;
     }
 
-    data->use_polling = !config->irq_gpio.port;
-    if (!data->use_polling) {
-        err = pmw3360_init_irq(dev);
-        if (err) {
-            return err;
-        }
+    /* Match the QMK PMW3360 logic: use the standard 4-wire SPI bus
+     * (CS, SCK, MOSI, MISO) and poll for motion data without relying on an
+     * extra interrupt pin. This keeps the schematic to the same four signals
+     * as the original QMK driver.
+     */
+    data->use_polling = true;
+    if (config->irq_gpio.port) {
+        LOG_WRN("IRQ GPIO configured, but ignored to keep the QMK-style 4-wire SPI mode");
     }
 
-    if (data->use_polling) {
-        k_work_init_delayable(&data->poll_work, pmw3360_poll_work_callback);
-    }
+    k_work_init_delayable(&data->poll_work, pmw3360_poll_work_callback);
 
     // Setup delayable and non-blocking init jobs, including following steps:
     // 1. power reset

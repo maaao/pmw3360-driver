@@ -1,5 +1,6 @@
 description: |
-  Sensor driver for the pixart PMW3360 mouse sensor 
+  Sensor driver for the PixArt PMW3360 mouse sensor.
+  It uses the standard QMK-style 4-wire SPI interface: CS, SCLK, MOSI, and MISO.
 
 compatible: "pixart,pmw3360"
 

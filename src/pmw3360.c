@@ -660,9 +660,15 @@ static int pmw3360_report_data(const struct device *dev) {
     int16_t x;
     int16_t y;
 
+    /*
+     * The PMW3360's sensor axes are mounted in the opposite logical orientation
+     * for this trackball, so we swap the axes to match the actual motion seen in
+     * the shell. This makes upward movement report to the right and rightward
+     * movement report downward, which matches the user's physical ball motion.
+     */
     if (IS_ENABLED(CONFIG_PMW3360_ORIENTATION_0)) {
-        x = -raw_x;
-        y = raw_y;
+        x = raw_y;
+        y = raw_x;
     } else if (IS_ENABLED(CONFIG_PMW3360_ORIENTATION_90)) {
         x = raw_y;
         y = -raw_x;

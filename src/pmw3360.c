@@ -300,7 +300,7 @@ static int set_cpi(const struct device *dev, uint32_t cpi) {
     /* Convert CPI to register value */
     uint8_t value = (cpi / 100) - 1;
 
-    LOG_INF("Setting CPI to %u (reg value 0x%x)", cpi, value);
+    // LOG_INF("Setting CPI to %u (reg value 0x%x)", cpi, value);
 
     int err = reg_write(dev, PMW3360_REG_CONFIG1, value);
     if (err) {

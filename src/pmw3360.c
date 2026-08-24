@@ -9,7 +9,7 @@
 // 12-bit two's complement value to int16_t
 // adapted from https://stackoverflow.com/questions/70802306/convert-a-12-bit-signed-number-in-c
 #define TOINT16(val, bits) (((struct { int16_t value : bits; }){val}).value)
-#define PMW3360_SCROLL_TICK 12
+#define PMW3360_SCROLL_TICK 18
 
 #include <zephyr/kernel.h>
 #include <zephyr/sys/byteorder.h>
@@ -729,11 +729,11 @@ static int pmw3360_report_data(const struct device *dev) {
             int32_t horizontal_ticks = data->scroll_delta_x / PMW3360_SCROLL_TICK;
             int32_t vertical_ticks = data->scroll_delta_y / PMW3360_SCROLL_TICK;
             if (horizontal_ticks != 0) {
-                input_report_rel(dev, INPUT_REL_HWHEEL, horizontal_ticks, false, K_FOREVER);
+                input_report_rel(dev, INPUT_REL_HWHEEL, -horizontal_ticks, false, K_FOREVER);
                 data->scroll_delta_x -= horizontal_ticks * PMW3360_SCROLL_TICK;
             }
             if (vertical_ticks != 0) {
-                input_report_rel(dev, INPUT_REL_WHEEL, vertical_ticks, true, K_FOREVER);
+                input_report_rel(dev, INPUT_REL_WHEEL, -vertical_ticks, true, K_FOREVER);
                 data->scroll_delta_y -= vertical_ticks * PMW3360_SCROLL_TICK;
             }
         } else {

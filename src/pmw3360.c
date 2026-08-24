@@ -9,8 +9,6 @@
 // 12-bit two's complement value to int16_t
 // adapted from https://stackoverflow.com/questions/70802306/convert-a-12-bit-signed-number-in-c
 #define TOINT16(val, bits) (((struct { int16_t value : bits; }){val}).value)
-#define PMW3360_SCROLL_TICK 18
-#define PMW3360_HSCROLL_TICK 24
 
 #include <zephyr/kernel.h>
 #include <zephyr/sys/byteorder.h>
@@ -603,6 +601,66 @@ static int set_cpi_if_needed(const struct device *dev, uint32_t cpi) {
     return 0;
 }
 
+int pmw3360_control(const struct device *dev, enum pmw3360_control_command command) {
+    struct pixart_data *data = dev->data;
+
+    switch (command) {
+    case PMW3360_CONTROL_CURSOR_SLOWER:
+        data->cursor_divisor = MIN(data->cursor_divisor + 1, 12);
+        break;
+    case PMW3360_CONTROL_CURSOR_FASTER:
+        data->cursor_divisor = MAX(data->cursor_divisor - 1, 1);
+        break;
+    case PMW3360_CONTROL_SCROLL_SLOWER:
+        data->scroll_tick = MIN(data->scroll_tick + 1, 100);
+        break;
+    case PMW3360_CONTROL_SCROLL_FASTER:
+        data->scroll_tick = MAX(data->scroll_tick - 1, 1);
+        break;
+    case PMW3360_CONTROL_HSCROLL_SLOWER:
+        data->hscroll_tick = MIN(data->hscroll_tick + 1, 100);
+        break;
+    case PMW3360_CONTROL_HSCROLL_FASTER:
+        data->hscroll_tick = MAX(data->hscroll_tick - 1, 1);
+        break;
+    case PMW3360_CONTROL_TOGGLE_CURSOR_X:
+        data->invert_cursor_x = !data->invert_cursor_x;
+        break;
+    case PMW3360_CONTROL_TOGGLE_CURSOR_Y:
+        data->invert_cursor_y = !data->invert_cursor_y;
+        break;
+    case PMW3360_CONTROL_TOGGLE_SCROLL_X:
+        data->invert_scroll_x = !data->invert_scroll_x;
+        break;
+    case PMW3360_CONTROL_TOGGLE_SCROLL_Y:
+        data->invert_scroll_y = !data->invert_scroll_y;
+        break;
+    case PMW3360_CONTROL_RESET:
+        data->cursor_divisor = CONFIG_PMW3360_CPI_DIVIDOR;
+        data->scroll_tick = PMW3360_DEFAULT_SCROLL_TICK;
+        data->hscroll_tick = PMW3360_DEFAULT_HSCROLL_TICK;
+        data->invert_cursor_x = false;
+        data->invert_cursor_y = false;
+        data->invert_scroll_x = false;
+        data->invert_scroll_y = true;
+        break;
+    default:
+        return -EINVAL;
+    }
+
+    return 0;
+}
+
+int pmw3360_control_default(enum pmw3360_control_command command) {
+    const struct device *sensor = DEVICE_DT_GET(DT_COMPAT_GET_ANY_STATUS_OKAY(pixart_pmw3360));
+
+    if (!device_is_ready(sensor)) {
+        return -ENODEV;
+    }
+
+    return pmw3360_control(sensor, command);
+}
+
 static int pmw3360_report_data(const struct device *dev) {
 //    LOG_INF("In pwm3360_report_data");
     struct pixart_data *data = dev->data;
@@ -619,7 +677,7 @@ static int pmw3360_report_data(const struct device *dev) {
     switch (input_mode) {
     case MOVE:
         set_cpi_if_needed(dev, CONFIG_PMW3360_CPI);
-        dividor = CONFIG_PMW3360_CPI_DIVIDOR;
+        dividor = data->cursor_divisor;
         break;
     case SCROLL:
         set_cpi_if_needed(dev, CONFIG_PMW3360_CPI);
@@ -690,6 +748,13 @@ static int pmw3360_report_data(const struct device *dev) {
         y = -y;
     }
 
+    if (data->invert_cursor_x) {
+        x = -x;
+    }
+    if (data->invert_cursor_y) {
+        y = -y;
+    }
+
 //#ifdef CONFIG_PMW3610_SMART_ALGORITHM
 //    int16_t shutter =
 //        ((int16_t)(buf[PMW3610_SHUTTER_H_POS] & 0x01) << 8) + buf[PMW3610_SHUTTER_L_POS];
@@ -724,18 +789,25 @@ static int pmw3360_report_data(const struct device *dev) {
 
     if (x != 0 || y != 0) {
         if (input_mode == SCROLL) {
+            if (data->invert_scroll_x) {
+                x = -x;
+            }
+            if (data->invert_scroll_y) {
+                y = -y;
+            }
+
             data->scroll_delta_x += x;
             data->scroll_delta_y += y;
 
-            int32_t horizontal_ticks = data->scroll_delta_x / PMW3360_HSCROLL_TICK;
-            int32_t vertical_ticks = data->scroll_delta_y / PMW3360_SCROLL_TICK;
+            int32_t horizontal_ticks = data->scroll_delta_x / data->hscroll_tick;
+            int32_t vertical_ticks = data->scroll_delta_y / data->scroll_tick;
             if (horizontal_ticks != 0) {
                 input_report_rel(dev, INPUT_REL_HWHEEL, horizontal_ticks, false, K_FOREVER);
-                data->scroll_delta_x -= horizontal_ticks * PMW3360_HSCROLL_TICK;
+                data->scroll_delta_x -= horizontal_ticks * data->hscroll_tick;
             }
             if (vertical_ticks != 0) {
                 input_report_rel(dev, INPUT_REL_WHEEL, -vertical_ticks, true, K_FOREVER);
-                data->scroll_delta_y -= vertical_ticks * PMW3360_SCROLL_TICK;
+                data->scroll_delta_y -= vertical_ticks * data->scroll_tick;
             }
         } else {
             input_report_rel(dev, INPUT_REL_X, x, false, K_FOREVER);
@@ -907,6 +979,13 @@ static int pmw3360_init(const struct device *dev) {
 
     // init device pointer
     data->dev = dev;
+    data->cursor_divisor = CONFIG_PMW3360_CPI_DIVIDOR;
+    data->scroll_tick = PMW3360_DEFAULT_SCROLL_TICK;
+    data->hscroll_tick = PMW3360_DEFAULT_HSCROLL_TICK;
+    data->invert_cursor_x = false;
+    data->invert_cursor_y = false;
+    data->invert_scroll_x = false;
+    data->invert_scroll_y = true;
 
     // init trigger handler work
     k_work_init(&data->trigger_work, pmw3360_work_callback);

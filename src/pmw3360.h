@@ -111,6 +111,26 @@ extern "C" {
 #define PMW3360_SVALUE_TO_TIME(svalue) ((uint32_t)(svalue).val1)
 #define PMW3360_SVALUE_TO_BOOL(svalue) ((svalue).val1 != 0)
 
+#define PMW3360_DEFAULT_SCROLL_TICK 18
+#define PMW3360_DEFAULT_HSCROLL_TICK 10
+
+enum pmw3360_control_command {
+	PMW3360_CONTROL_CURSOR_SLOWER,
+	PMW3360_CONTROL_CURSOR_FASTER,
+	PMW3360_CONTROL_SCROLL_SLOWER,
+	PMW3360_CONTROL_SCROLL_FASTER,
+	PMW3360_CONTROL_HSCROLL_SLOWER,
+	PMW3360_CONTROL_HSCROLL_FASTER,
+	PMW3360_CONTROL_TOGGLE_CURSOR_X,
+	PMW3360_CONTROL_TOGGLE_CURSOR_Y,
+	PMW3360_CONTROL_TOGGLE_SCROLL_X,
+	PMW3360_CONTROL_TOGGLE_SCROLL_Y,
+	PMW3360_CONTROL_RESET,
+};
+
+int pmw3360_control(const struct device *dev, enum pmw3360_control_command command);
+int pmw3360_control_default(enum pmw3360_control_command command);
+
 /** @brief Sensor specific attributes of PMW3360. */
 enum pmw3360_attribute {
 	/** Sensor CPI for both X and Y axes. */

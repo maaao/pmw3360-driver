@@ -789,22 +789,13 @@ static int pmw3360_report_data(const struct device *dev) {
 
     if (x != 0 || y != 0) {
         if (input_mode == SCROLL) {
-            if (data->invert_scroll_x) {
-                x = -x;
-            }
             if (data->invert_scroll_y) {
                 y = -y;
             }
 
-            data->scroll_delta_x += x;
             data->scroll_delta_y += y;
 
-            int32_t horizontal_ticks = data->scroll_delta_x / data->hscroll_tick;
             int32_t vertical_ticks = data->scroll_delta_y / data->scroll_tick;
-            if (horizontal_ticks != 0) {
-                input_report_rel(dev, INPUT_REL_HWHEEL, horizontal_ticks, false, K_FOREVER);
-                data->scroll_delta_x -= horizontal_ticks * data->hscroll_tick;
-            }
             if (vertical_ticks != 0) {
                 input_report_rel(dev, INPUT_REL_WHEEL, -vertical_ticks, true, K_FOREVER);
                 data->scroll_delta_y -= vertical_ticks * data->scroll_tick;

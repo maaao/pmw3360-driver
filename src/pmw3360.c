@@ -729,7 +729,7 @@ static int pmw3360_report_data(const struct device *dev) {
             int32_t horizontal_ticks = data->scroll_delta_x / PMW3360_SCROLL_TICK;
             int32_t vertical_ticks = data->scroll_delta_y / PMW3360_SCROLL_TICK;
             if (horizontal_ticks != 0) {
-                input_report_rel(dev, INPUT_REL_HWHEEL, -horizontal_ticks, false, K_FOREVER);
+                input_report_rel(dev, INPUT_REL_HWHEEL, horizontal_ticks, false, K_FOREVER);
                 data->scroll_delta_x -= horizontal_ticks * PMW3360_SCROLL_TICK;
             }
             if (vertical_ticks != 0) {

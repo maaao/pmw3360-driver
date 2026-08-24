@@ -10,7 +10,7 @@
 // adapted from https://stackoverflow.com/questions/70802306/convert-a-12-bit-signed-number-in-c
 #define TOINT16(val, bits) (((struct { int16_t value : bits; }){val}).value)
 #define PMW3360_SCROLL_TICK 18
-#define PMW3360_HSCROLL_TICK 4
+#define PMW3360_HSCROLL_TICK 24
 
 #include <zephyr/kernel.h>
 #include <zephyr/sys/byteorder.h>

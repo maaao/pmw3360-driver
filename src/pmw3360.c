@@ -13,7 +13,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/input/input.h>
-//#include <zephyr/keymap.h>
+#include <zmk/keymap.h>
 #include <zephyr/logging/log.h>
 #include "pmw3360.h"
 
@@ -577,18 +577,18 @@ static void pmw3360_poll_work_callback(struct k_work *work) {
 }
 
 static enum pixart_input_mode get_input_mode_for_current_layer(const struct device *dev) {
-//    const struct pixart_config *config = dev->config;
-//    uint8_t curr_layer = zmk_keymap_highest_layer_active();
-//    for (size_t i = 0; i < config->scroll_layers_len; i++) {
-//        if (curr_layer == config->scroll_layers[i]) {
-//            return SCROLL;
-//        }
-//    }
-//    for (size_t i = 0; i < config->snipe_layers_len; i++) {
-//        if (curr_layer == config->snipe_layers[i]) {
-//            return SNIPE;
-//        }
-//    }
+    const struct pixart_config *config = dev->config;
+    uint8_t curr_layer = zmk_keymap_highest_layer_active();
+    for (size_t i = 0; i < config->scroll_layers_len; i++) {
+        if (curr_layer == config->scroll_layers[i]) {
+            return SCROLL;
+        }
+    }
+    for (size_t i = 0; i < config->snipe_layers_len; i++) {
+        if (curr_layer == config->snipe_layers[i]) {
+            return SNIPE;
+        }
+    }
     return MOVE;
 }
 
@@ -721,27 +721,13 @@ static int pmw3360_report_data(const struct device *dev) {
 //#endif
 
     if (x != 0 || y != 0) {
-        if (input_mode != SCROLL) {
+        if (input_mode == SCROLL) {
+            input_report_rel(dev, INPUT_REL_HWHEEL, x, false, K_FOREVER);
+            input_report_rel(dev, INPUT_REL_WHEEL, y, true, K_FOREVER);
+        } else {
             input_report_rel(dev, INPUT_REL_X, x, false, K_FOREVER);
             input_report_rel(dev, INPUT_REL_Y, y, true, K_FOREVER);
         }
-//        } else {
-//            data->scroll_delta_x += x;
-//            data->scroll_delta_y += y;
-//            if (abs(data->scroll_delta_y) > CONFIG_PMW3610_SCROLL_TICK) {
-//                input_report_rel(dev, INPUT_REL_WHEEL,
-//                                 data->scroll_delta_y > 0 ? PMW3610_SCROLL_Y_NEGATIVE : PMW3610_SCROLL_Y_POSITIVE,
-//                                 true, K_FOREVER);
-//                data->scroll_delta_x = 0;
-//                data->scroll_delta_y = 0;
-//            } else if (abs(data->scroll_delta_x) > CONFIG_PMW3610_SCROLL_TICK) {
-//                input_report_rel(dev, INPUT_REL_HWHEEL,
-//                                 data->scroll_delta_x > 0 ? PMW3610_SCROLL_X_NEGATIVE : PMW3610_SCROLL_X_POSITIVE,
-//                                 true, K_FOREVER);
-//                data->scroll_delta_x = 0;
-//                data->scroll_delta_y = 0;
-//            }
-//        }
     }
 
     return err;
